@@ -58,6 +58,7 @@ namespace AsyncWorker
         public int WaitingCount;
     }
 
+    // Work with Action
     internal class WorkA : Work
     {
         public Action Action;
@@ -69,6 +70,7 @@ namespace AsyncWorker
         }
     }
 
+    // Work with Action and State
     internal class WorkAs : Work
     {
         public Action<object> Action;
@@ -81,6 +83,7 @@ namespace AsyncWorker
         }
     }
 
+    // Work with Func
     internal class WorkF : Work
     {
         public Func<Task> Function;
@@ -91,6 +94,7 @@ namespace AsyncWorker
         }
     }
 
+    // Work with Func and State
     internal class WorkFs : Work
     {
         public Func<object, Task> Function;
@@ -102,6 +106,7 @@ namespace AsyncWorker
         }
     }
 
+    // Work with Func and Token
     internal class WorkFt : Work
     {
         public Func<CancellationToken, Task> Function;
@@ -113,6 +118,7 @@ namespace AsyncWorker
         }
     }
 
+    // Work with Func, State and Token
     internal class WorkFst : Work
     {
         public Func<object, CancellationToken, Task> Function;
@@ -125,6 +131,7 @@ namespace AsyncWorker
         }
     }
 
+    // Work for Post
     internal class WorkPost : Work
     {
         public SendOrPostCallback Action;
@@ -137,6 +144,7 @@ namespace AsyncWorker
         }
     }
 
+    // Work for Sync
     internal class WorkSync : Work
     {
         public WorkSyncContext Source;
