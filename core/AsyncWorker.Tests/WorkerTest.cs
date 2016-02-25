@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -7,6 +8,119 @@ namespace AsyncWorker.Tests
 {
     public class WorkerTest
     {
+        [Fact]
+        public void InvokeAction_Run()
+        {
+            // Arrange
+
+            var log = new ConcurrentQueue<int>();
+            var worker = new Worker();
+            var done = new AutoResetEvent(false);
+
+            // Act
+
+            worker.Invoke(() => {
+                log.Enqueue(1);
+                done.Set();
+            });
+            done.WaitOne();
+
+            // Assert
+
+            Assert.Equal(new[] { 1 }, log);
+        }
+
+        [Fact]
+        public void InvokeActionWithState_Run()
+        {
+            // Arrange
+
+            var log = new ConcurrentQueue<int>();
+            var worker = new Worker();
+            var done = new AutoResetEvent(false);
+
+            // Act
+
+            worker.Invoke(state => {
+                log.Enqueue(1);
+                ((AutoResetEvent)state).Set();
+            }, done);
+            done.WaitOne();
+
+            // Assert
+
+            Assert.Equal(new[] { 1 }, log);
+        }
+
+        [Fact]
+        public void InvokeTask_Run()
+        {
+            // Arrange
+
+            var log = new ConcurrentQueue<int>();
+            var worker = new Worker();
+            var done = new AutoResetEvent(false);
+
+            // Act
+
+            worker.Invoke(async () => {
+                log.Enqueue(1);
+                await Task.Yield();
+                log.Enqueue(2);
+                done.Set();
+            });
+            done.WaitOne();
+
+            // Assert
+
+            Assert.Equal(new[] { 1, 2 }, log);
+        }
+
+        [Fact]
+        public void InvokeTaskWithState_Run()
+        {
+            // Arrange
+
+            var log = new ConcurrentQueue<int>();
+            var worker = new Worker();
+            var done = new AutoResetEvent(false);
+
+            // Act
+
+            worker.Invoke(async state => {
+                log.Enqueue(1);
+                await Task.Yield();
+                log.Enqueue(2);
+                ((AutoResetEvent)state).Set();
+            }, done);
+            done.WaitOne();
+
+            // Assert
+
+            Assert.Equal(new[] { 1, 2 }, log);
+        }
+
+        [Fact]
+        public async Task InvokeTask_WaitForReturnTask()
+        {
+            // Arrange
+
+            var log = new ConcurrentQueue<int>();
+            var worker = new Worker();
+
+            // Act
+
+            await worker.InvokeReturn(async () => {
+                log.Enqueue(1);
+                await Task.Yield();
+                log.Enqueue(2);
+            });
+
+            // Assert
+
+            Assert.Equal(new[] { 1, 2 }, log);
+        }
+
         [Fact]
         public async Task InvokeMultipleWork_RunSynchronously()
         {
@@ -153,7 +267,7 @@ namespace AsyncWorker.Tests
         }
 
         [Fact]
-        public async Task BarrierReturn_AllWorkBeforeDone()
+        public async Task BarrierReturn_MakeAllBeforeWorkDone()
         {
             // Arrange
 
@@ -292,13 +406,29 @@ namespace AsyncWorker.Tests
         */
 
         [Fact]
-        public async Task TODO_InvokeReturn()
+        public async Task CloseWorkingWorker_CancelAllPendingWorks()
         {
-        }
+            // Arrange
 
-        [Fact]
-        public async Task TODO_CloseWorkingWorker_CancelAllPendingWorks()
-        {
+            var log = new ConcurrentQueue<int>();
+            var worker = new Worker();
+
+            // Act
+
+            await Assert.ThrowsAnyAsync<TaskCanceledException>(async () =>
+            {
+                await worker.InvokeReturn(async (state, cts) =>
+                {
+                    log.Enqueue(1);
+                    worker.Close();
+                    await Task.Delay(10000, cts);
+                    log.Enqueue(2);
+                }, worker);
+            });
+
+            // Assert
+
+            Assert.Equal(new[] { 1 }, log);
         }
     }
 }
