@@ -4,7 +4,7 @@ configuration: Debug
 before_build:
 - cmd: nuget restore
 build:
-  project: AsyncWorker
+  project: AsyncWorker.sln
   verbosity: minimal
 environment:
   NUGETKEY:
