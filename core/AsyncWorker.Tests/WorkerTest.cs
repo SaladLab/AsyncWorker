@@ -19,7 +19,8 @@ namespace AsyncWorker.Tests
 
             // Act
 
-            worker.Invoke(() => {
+            worker.Invoke(() =>
+            {
                 log.Enqueue(1);
                 done.Set();
             });
@@ -41,7 +42,8 @@ namespace AsyncWorker.Tests
 
             // Act
 
-            worker.Invoke(state => {
+            worker.Invoke(state =>
+            {
                 log.Enqueue(1);
                 ((AutoResetEvent)state).Set();
             }, done);
@@ -63,7 +65,8 @@ namespace AsyncWorker.Tests
 
             // Act
 
-            worker.Invoke(async () => {
+            worker.Invoke(async () =>
+            {
                 log.Enqueue(1);
                 await Task.Yield();
                 log.Enqueue(2);
@@ -87,7 +90,8 @@ namespace AsyncWorker.Tests
 
             // Act
 
-            worker.Invoke(async state => {
+            worker.Invoke(async state =>
+            {
                 log.Enqueue(1);
                 await Task.Yield();
                 log.Enqueue(2);
@@ -110,7 +114,8 @@ namespace AsyncWorker.Tests
 
             // Act
 
-            await worker.InvokeReturn(async () => {
+            await worker.InvokeReturn(async () =>
+            {
                 log.Enqueue(1);
                 await Task.Yield();
                 log.Enqueue(2);
@@ -147,7 +152,7 @@ namespace AsyncWorker.Tests
             // Assert
 
             Assert.Equal(false, trap.Trapped);
-            Assert.Equal(new[] {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, log);
+            Assert.Equal(new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 }, log);
         }
 
         [Fact]
@@ -340,7 +345,7 @@ namespace AsyncWorker.Tests
             });
 
             await Task.WhenAll(worker1.SetBarrierReturn(),
-                worker2.SetBarrierReturn());
+                               worker2.SetBarrierReturn());
 
             // Assert
 
