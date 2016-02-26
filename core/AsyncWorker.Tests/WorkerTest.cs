@@ -144,7 +144,7 @@ namespace AsyncWorker.Tests
                 var local_i = i;
                 worker.Invoke(() =>
                 {
-                    using (var block = new ConcurrentTrapBlock(trap))
+                    using (new ConcurrentTrapBlock(trap))
                         log.Enqueue(local_i);
                 });
             }
@@ -173,12 +173,12 @@ namespace AsyncWorker.Tests
                 var local_i = i;
                 worker.Invoke(async () =>
                 {
-                    using (var block = new ConcurrentTrapBlock(trap))
+                    using (new ConcurrentTrapBlock(trap))
                         log.Enqueue(local_i);
 
                     await Task.Yield();
 
-                    using (var block = new ConcurrentTrapBlock(trap))
+                    using (new ConcurrentTrapBlock(trap))
                         log.Enqueue(-local_i);
                 });
             }
@@ -364,8 +364,9 @@ namespace AsyncWorker.Tests
         {
             // Arrange
 
-            var trap = new ConcurrentTrap();
             var log = new ConcurrentQueue<int>();
+            var trap1 = new ConcurrentTrap();
+            var trap2 = new ConcurrentTrap();
             var worker1 = new Worker("Worker1");
             var worker2 = new Worker("Worker2");
 
@@ -373,43 +374,46 @@ namespace AsyncWorker.Tests
 
             worker1.Invoke(async () =>
             {
-                using (var block = new ConcurrentTrapBlock(trap))
+                using (new ConcurrentTrapBlock(trap1))
                     log.Enqueue(1);
 
                 await Task.Yield();
 
-                using (var block = new ConcurrentTrapBlock(trap))
+                using (new ConcurrentTrapBlock(trap1))
                     log.Enqueue(-1);
             });
 
-            worker1.Invoke(async () =>
-            {
-                using (var block = new ConcurrentTrapBlock(trap))
-                    log.Enqueue(100);
-
-                await Task.Yield();
-
-                using (var block = new ConcurrentTrapBlock(trap))
-                    log.Enqueue(101);
-            }, syncOptions: new SyncOptions(worker2));
-
             worker2.Invoke(async () =>
             {
-                using (var block = new ConcurrentTrapBlock(trap))
+                using (new ConcurrentTrapBlock(trap2))
                     log.Enqueue(2);
 
                 await Task.Yield();
 
-                using (var block = new ConcurrentTrapBlock(trap))
+                using (new ConcurrentTrapBlock(trap2))
                     log.Enqueue(-2);
             });
+
+            worker1.Invoke(async () =>
+            {
+                using (new ConcurrentTrapBlock(trap1))
+                using (new ConcurrentTrapBlock(trap2))
+                    log.Enqueue(100);
+
+                await Task.Yield();
+
+                using (new ConcurrentTrapBlock(trap1))
+                using (new ConcurrentTrapBlock(trap2))
+                    log.Enqueue(101);
+            }, syncOptions: new SyncOptions(worker2));
 
             await Task.WhenAll(worker1.SetBarrierAsync(),
                                worker2.SetBarrierAsync());
 
             // Assert
 
-            Assert.Equal(false, trap.Trapped);
+            Assert.Equal(false, trap1.Trapped);
+            Assert.Equal(false, trap2.Trapped);
             Assert.Equal(6, log.Count);
         }
 
@@ -418,8 +422,9 @@ namespace AsyncWorker.Tests
         {
             // Arrange
 
-            var trap = new ConcurrentTrap();
             var log = new ConcurrentQueue<int>();
+            var trap1 = new ConcurrentTrap();
+            var trap2 = new ConcurrentTrap();
             var worker1 = new Worker("Worker1");
             var worker2 = new Worker("Worker2");
 
@@ -427,34 +432,36 @@ namespace AsyncWorker.Tests
 
             worker1.Invoke(async () =>
             {
-                using (var block = new ConcurrentTrapBlock(trap))
+                using (new ConcurrentTrapBlock(trap1))
                     log.Enqueue(1);
 
                 await Task.Yield();
 
-                using (var block = new ConcurrentTrapBlock(trap))
+                using (new ConcurrentTrapBlock(trap1))
                     log.Enqueue(-1);
             });
 
             worker1.Invoke(async () =>
             {
-                using (var block = new ConcurrentTrapBlock(trap))
+                using (new ConcurrentTrapBlock(trap2))
                     log.Enqueue(100);
 
                 await Task.Yield();
 
-                using (var block = new ConcurrentTrapBlock(trap))
+                using (new ConcurrentTrapBlock(trap2))
                     log.Enqueue(101);
             }, InvokeOptions.Atomic, new SyncOptions(worker2));
 
             worker2.Invoke(async () =>
             {
-                using (var block = new ConcurrentTrapBlock(trap))
+                using (new ConcurrentTrapBlock(trap1))
+                using (new ConcurrentTrapBlock(trap2))
                     log.Enqueue(2);
 
                 await Task.Yield();
 
-                using (var block = new ConcurrentTrapBlock(trap))
+                using (new ConcurrentTrapBlock(trap1))
+                using (new ConcurrentTrapBlock(trap2))
                     log.Enqueue(-2);
             });
 
@@ -463,8 +470,11 @@ namespace AsyncWorker.Tests
 
             // Assert
 
-            Assert.Equal(false, trap.Trapped);
+            Assert.Equal(false, trap1.Trapped);
+            Assert.Equal(false, trap2.Trapped);
             Assert.Equal(6, log.Count);
+            var idx = log.ToList().IndexOf(100);
+            Assert.Equal(101, log.ToList()[idx + 1]);
         }
 
         [Fact]
