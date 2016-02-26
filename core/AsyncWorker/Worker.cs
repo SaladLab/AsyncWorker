@@ -261,7 +261,7 @@ namespace AsyncWorker
         private void QueueWork(Work work)
         {
             if (work.Sync != null)
-                work.Sync.QueueSyncToWaiters();
+                work.Sync.RequestSyncToWaiters();
 
             lock (_lock)
             {
@@ -303,10 +303,10 @@ namespace AsyncWorker
 
             if (ownerWork != null)
             {
-                if (ownerWork.Sync != null)
+                if (ownerWork.Sync != null && (ownerWork.Options & (int)InvokeOptions.Atomic) == 0)
                 {
                     work.Sync = new WorkSyncContext(ownerWork.Sync.Options);
-                    work.Sync.QueueSyncToWaiters();
+                    work.Sync.RequestSyncToWaiters();
                 }
             }
 
@@ -475,14 +475,14 @@ namespace AsyncWorker
         private void ProcessWork(Work work)
         {
             WorkerSynchronizationContext syncCtx = null;
-            if (work.Sync != null || (work.Options & (int)InvokeOptions.Atomic) != 0)
-            {
-                syncCtx = new WorkerSynchronizationContext(this, work);
-                SynchronizationContext.SetSynchronizationContext(syncCtx);
-            }
-            else if ((work.Options & (int)WorkOptions.Post) != 0 && _isInAtomic)
+            if ((work.Options & (int)WorkOptions.Post) != 0 && _isInAtomic)
             {
                 syncCtx = new WorkerSynchronizationContext(this, _atomicWork);
+                SynchronizationContext.SetSynchronizationContext(syncCtx);
+            }
+            else if (work.Sync != null || (work.Options & (int)InvokeOptions.Atomic) != 0)
+            {
+                syncCtx = new WorkerSynchronizationContext(this, work);
                 SynchronizationContext.SetSynchronizationContext(syncCtx);
             }
 
@@ -503,13 +503,16 @@ namespace AsyncWorker
             {
                 SynchronizationContext.SetSynchronizationContext(_synchronizationContext);
                 if (work.Sync != null)
-                    work.Sync.OnComplete();
+                {
+                    if (task == null || (work.Options & (int)InvokeOptions.Atomic) == 0)
+                        work.Sync.NotifySyncEndToWaiters();
+                }
             }
 
             if (task != null)
             {
                 Interlocked.Increment(ref _runningTaskCount);
-                task.ContinueWith(OnTaskComplete, work);
+                task.ContinueWith(OnTaskComplete, work, TaskContinuationOptions.ExecuteSynchronously);
             }
             else
             {
@@ -552,6 +555,9 @@ namespace AsyncWorker
 
             if ((work.Options & (int)InvokeOptions.Atomic) != 0)
             {
+                if (work.Sync != null)
+                    work.Sync.NotifySyncEndToWaiters();
+
                 bool willSpawn = false;
                 lock (_lock)
                 {
@@ -604,10 +610,13 @@ namespace AsyncWorker
             _isInBarrier = false;
             _waitingBarrier = null;
 
+            // resume all pending works
             while (_barrierWorkQueue.Count > 0)
             {
                 var w = _barrierWorkQueue.Dequeue();
                 _workQueue.Enqueue(w);
+
+                // if we got barrier in pending works, trigger barrier mode again
                 if ((w.Options & (int)WorkOptions.Barrier) != 0)
                 {
                     _isInBarrier = true;
@@ -619,8 +628,22 @@ namespace AsyncWorker
                 barrierWork.CompletionSource.TrySetResult(null);
         }
 
-        internal void OnSyncStart(WorkSyncContext sync)
+        internal void OnSyncReady(WorkSyncContext sync)
         {
+            if ((_waitingSyncedWork.Options & (int)InvokeOptions.Atomic) != 0)
+            {
+                if (_isInAtomic)
+                    throw new InvalidOperationException("Already in atomic");
+
+                _isInAtomic = true;
+                _atomicWork = _waitingSyncedWork;
+                Swap(ref _workQueue, ref _pendingWorkQueue);
+                if (_workQueue == null)
+                    _workQueue = new Queue<Work>();
+            }
+
+            // all waitor workers stops for waiting this work done.
+            // we can process this work safely.
             ProcessWork(_waitingSyncedWork);
 
             lock (_lock)
@@ -635,8 +658,9 @@ namespace AsyncWorker
             }
         }
 
-        internal void OnSyncComplete(WorkSyncContext sync)
+        internal void OnSyncEnd(WorkSyncContext sync)
         {
+            // when synched work finshed, resume work loop again
             lock (_lock)
             {
                 if (_waitingSync.Source == sync)
@@ -651,7 +675,7 @@ namespace AsyncWorker
                 }
                 else
                 {
-                    throw new NotImplementedException("TODO");
+                    throw new InvalidOperationException("Waiting state doesn't match with event source");
                 }
             }
         }

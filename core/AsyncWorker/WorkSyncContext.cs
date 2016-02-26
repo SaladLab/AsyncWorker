@@ -10,11 +10,19 @@ namespace AsyncWorker
             WaitingCount = options.Workers.Length + 1;
         }
 
-        public void QueueSyncToWaiters()
+        public void RequestSyncToWaiters()
         {
             foreach (var worker in Options.Workers)
             {
                 worker.QueueSync(this);
+            }
+        }
+
+        public void NotifySyncEndToWaiters()
+        {
+            foreach (var worker in Options.Workers)
+            {
+                worker.OnSyncEnd(this);
             }
         }
 
@@ -23,7 +31,7 @@ namespace AsyncWorker
             Owner = worker;
             if (Interlocked.Decrement(ref WaitingCount) == 0)
             {
-                Owner.OnSyncStart(this);
+                Owner.OnSyncReady(this);
             }
         }
 
@@ -31,15 +39,7 @@ namespace AsyncWorker
         {
             if (Interlocked.Decrement(ref WaitingCount) == 0)
             {
-                Owner.OnSyncStart(this);
-            }
-        }
-
-        public void OnComplete()
-        {
-            foreach (var worker in Options.Workers)
-            {
-                worker.OnSyncComplete(this);
+                Owner.OnSyncReady(this);
             }
         }
 

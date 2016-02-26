@@ -1,4 +1,6 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -244,18 +246,18 @@ namespace AsyncWorker.Tests
                 {
                     log.Enqueue(local_i);
                     await Task.Yield();
-                    log.Enqueue(local_i);
+                    log.Enqueue(-local_i);
                 });
             }
 
             worker.SetBarrier();
 
-            for (var i = 1; i <= 10; i++)
+            for (var i = 11; i <= 20; i++)
             {
                 var local_i = i;
                 worker.Invoke(async () =>
                 {
-                    log.Enqueue(-local_i);
+                    log.Enqueue(local_i);
                     await Task.Yield();
                     log.Enqueue(-local_i);
                 });
@@ -267,8 +269,66 @@ namespace AsyncWorker.Tests
 
             var logItems = log.ToList();
             Assert.Equal(40, logItems.Count);
-            Assert.True(logItems.Take(20).All(x => x > 0));
-            Assert.True(logItems.Skip(20).Take(20).All(x => x < 0));
+            Assert.True(logItems.Take(20).All(x => Math.Abs(x) >= 1 && Math.Abs(x) <= 10));
+            Assert.True(logItems.Skip(20).Take(20).All(x => Math.Abs(x) >= 11 && Math.Abs(x) <= 20));
+        }
+
+        [Fact]
+        public async Task MultipleBarrier_SeparateBeforeAndAfterWorks()
+        {
+            // Arrange
+
+            var log = new ConcurrentQueue<int>();
+            var worker = new Worker();
+
+            // Act
+
+            for (var i = 1; i <= 10; i++)
+            {
+                var local_i = i;
+                worker.Invoke(async () =>
+                {
+                    log.Enqueue(local_i);
+                    await Task.Yield();
+                    log.Enqueue(-local_i);
+                });
+            }
+
+            worker.SetBarrier();
+
+            for (var i = 11; i <= 20; i++)
+            {
+                var local_i = i;
+                worker.Invoke(async () =>
+                {
+                    log.Enqueue(local_i);
+                    await Task.Yield();
+                    log.Enqueue(-local_i);
+                });
+            }
+
+            worker.SetBarrier();
+
+            for (var i = 21; i <= 30; i++)
+            {
+                var local_i = i;
+                worker.Invoke(async () =>
+                {
+                    log.Enqueue(local_i);
+                    await Task.Yield();
+                    log.Enqueue(-local_i);
+                });
+            }
+
+            await worker.SetBarrierReturn();
+
+            // Assert
+
+            var logItems = log.ToList();
+            Assert.Equal(60, logItems.Count);
+            Assert.True(logItems.Take(20).All(x => Math.Abs(x) >= 1 && Math.Abs(x) <= 10));
+            Assert.True(logItems.Skip(20).Take(20).All(x => Math.Abs(x) >= 11 && Math.Abs(x) <= 20));
+            Assert.True(logItems.Skip(40).Take(20).All(x => Math.Abs(x) >= 21 && Math.Abs(x) <= 30));
         }
 
         [Fact]
@@ -353,8 +413,6 @@ namespace AsyncWorker.Tests
             Assert.Equal(6, log.Count);
         }
 
-        // IT DOESN'T WORK NOW
-        /*
         [Fact]
         public async Task InvokeAtomicWork_SyncWithOtherWorker()
         {
@@ -362,8 +420,8 @@ namespace AsyncWorker.Tests
 
             var trap = new ConcurrentTrap();
             var log = new ConcurrentQueue<int>();
-            var worker1 = new Worker();
-            var worker2 = new Worker();
+            var worker1 = new Worker("Worker1");
+            var worker2 = new Worker("Worker2");
 
             // Act
 
@@ -408,7 +466,6 @@ namespace AsyncWorker.Tests
             Assert.Equal(false, trap.Trapped);
             Assert.Equal(6, log.Count);
         }
-        */
 
         [Fact]
         public async Task CloseWorkingWorker_CancelAllPendingWorks()
@@ -434,6 +491,76 @@ namespace AsyncWorker.Tests
             // Assert
 
             Assert.Equal(new[] { 1 }, log);
+        }
+
+        [Fact]
+        public async Task InvokeAction_UnhandledExceptionHandling()
+        {
+            // Arrange
+
+            Exception exception = null;
+            var log = new ConcurrentQueue<int>();
+            var worker = new Worker();
+            worker.UnhandledException += (w, e) => { exception = e; };
+
+            // Act
+
+            worker.Invoke(() =>
+            {
+                log.Enqueue(1);
+                throw new Exception("Test");
+                log.Enqueue(-1);
+            });
+
+            worker.Invoke(() =>
+            {
+                log.Enqueue(2);
+            });
+
+            await worker.SetBarrierReturn();
+
+            // Assert
+
+            Assert.NotNull(exception);
+            Assert.Equal("Test", exception.Message);
+            Assert.Equal(new[] { 1, 2 }, log);
+        }
+
+        [Fact]
+        public async Task InvokeTask_UnhandledExceptionHandling()
+        {
+            // Arrange
+
+            var exceptions = new List<Exception>();
+            var log = new ConcurrentQueue<int>();
+            var worker = new Worker();
+            worker.UnhandledException += (w, e) => { exceptions.Add(e); };
+
+            // Act
+
+            worker.Invoke(async () =>
+            {
+                log.Enqueue(1);
+                throw new Exception("Test1");
+                await Task.Yield();
+                log.Enqueue(-1);
+            });
+
+            worker.Invoke(async () =>
+            {
+                log.Enqueue(2);
+                await Task.Yield();
+                throw new Exception("Test2");
+                log.Enqueue(-2);
+            });
+
+            await worker.SetBarrierReturn();
+
+            // Assert
+
+            Assert.Equal(2, exceptions.Count);
+            Assert.Equal(new [] { "Test1", "Test2" }, exceptions.Select(e => e.Message));
+            Assert.Equal(new[] { 1, 2 }, log);
         }
     }
 }
