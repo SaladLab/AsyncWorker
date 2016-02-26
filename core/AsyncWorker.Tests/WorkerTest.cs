@@ -306,8 +306,8 @@ namespace AsyncWorker.Tests
 
             var trap = new ConcurrentTrap();
             var log = new ConcurrentQueue<int>();
-            var worker1 = new Worker();
-            var worker2 = new Worker();
+            var worker1 = new Worker("Worker1");
+            var worker2 = new Worker("Worker2");
 
             // Act
 

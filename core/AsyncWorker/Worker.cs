@@ -10,6 +10,7 @@ namespace AsyncWorker
     public class Worker : IDisposable
     {
         private readonly object _lock = new object();
+        private readonly string _name;
         private bool _isDisposed;
         private bool _isWorkLoopSpawned;
         private bool _isInAtomic;
@@ -26,14 +27,23 @@ namespace AsyncWorker
         private CancellationTokenSource _cancelTokenSource;
 
         /// <summary>
+        /// Name of worker
+        /// </summary>
+        public string Name
+        {
+            get { return _name; }
+        }
+
+        /// <summary>
         /// When an exception is unhandled internally, this action will be called.
         /// This call is not guaranteed to be serialized.
         /// </summary>
         public event Action<Worker, Exception> UnhandledException;
 
-        public Worker()
+        public Worker(string name = null)
         {
             _synchronizationContext = new WorkerSynchronizationContext(this);
+            _name = name;
         }
 
         public void Close()
