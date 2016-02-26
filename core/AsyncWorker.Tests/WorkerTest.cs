@@ -116,7 +116,7 @@ namespace AsyncWorker.Tests
 
             // Act
 
-            await worker.InvokeReturn(async () =>
+            await worker.InvokeAsync(async () =>
             {
                 log.Enqueue(1);
                 await Task.Yield();
@@ -149,7 +149,7 @@ namespace AsyncWorker.Tests
                 });
             }
 
-            await worker.SetBarrierReturn();
+            await worker.SetBarrierAsync();
 
             // Assert
 
@@ -183,7 +183,7 @@ namespace AsyncWorker.Tests
                 });
             }
 
-            await worker.SetBarrierReturn();
+            await worker.SetBarrierAsync();
 
             // Assert
 
@@ -220,7 +220,7 @@ namespace AsyncWorker.Tests
                 log.Enqueue(101);
             }, InvokeOptions.Atomic);
 
-            await worker.SetBarrierReturn();
+            await worker.SetBarrierAsync();
 
             // Assert
 
@@ -263,7 +263,7 @@ namespace AsyncWorker.Tests
                 });
             }
 
-            await worker.SetBarrierReturn();
+            await worker.SetBarrierAsync();
 
             // Assert
 
@@ -320,7 +320,7 @@ namespace AsyncWorker.Tests
                 });
             }
 
-            await worker.SetBarrierReturn();
+            await worker.SetBarrierAsync();
 
             // Assert
 
@@ -352,7 +352,7 @@ namespace AsyncWorker.Tests
                 });
             }
 
-            await worker.SetBarrierReturn();
+            await worker.SetBarrierAsync();
 
             // Assert
 
@@ -404,8 +404,8 @@ namespace AsyncWorker.Tests
                     log.Enqueue(-2);
             });
 
-            await Task.WhenAll(worker1.SetBarrierReturn(),
-                               worker2.SetBarrierReturn());
+            await Task.WhenAll(worker1.SetBarrierAsync(),
+                               worker2.SetBarrierAsync());
 
             // Assert
 
@@ -458,8 +458,8 @@ namespace AsyncWorker.Tests
                     log.Enqueue(-2);
             });
 
-            await Task.WhenAll(worker1.SetBarrierReturn(),
-                worker2.SetBarrierReturn());
+            await Task.WhenAll(worker1.SetBarrierAsync(),
+                               worker2.SetBarrierAsync());
 
             // Assert
 
@@ -479,7 +479,7 @@ namespace AsyncWorker.Tests
 
             await Assert.ThrowsAnyAsync<TaskCanceledException>(async () =>
             {
-                await worker.InvokeReturn(async (state, cts) =>
+                await worker.InvokeAsync(async (state, cts) =>
                 {
                     log.Enqueue(1);
                     worker.Close();
@@ -514,12 +514,9 @@ namespace AsyncWorker.Tests
             });
 #pragma warning restore 0162
 
-            worker.Invoke(() =>
-            {
-                log.Enqueue(2);
-            });
+            worker.Invoke(() => { log.Enqueue(2); });
 
-            await worker.SetBarrierReturn();
+            await worker.SetBarrierAsync();
 
             // Assert
 
@@ -558,12 +555,12 @@ namespace AsyncWorker.Tests
             });
 #pragma warning restore 0162
 
-            await worker.SetBarrierReturn();
+            await worker.SetBarrierAsync();
 
             // Assert
 
             Assert.Equal(2, exceptions.Count);
-            Assert.Equal(new [] { "Test1", "Test2" }, exceptions.Select(e => e.Message));
+            Assert.Equal(new[] { "Test1", "Test2" }, exceptions.Select(e => e.Message));
             Assert.Equal(new[] { 1, 2 }, log);
         }
     }

@@ -96,12 +96,16 @@ namespace AsyncWorker
             if (syncOptions.Workers.Length != syncOptions.Workers.Distinct().Count())
                 throw new ArgumentException(nameof(syncOptions), "There is a duplicate worker in Workers");
         }
-        
+
+        /// <summary>
+        /// Queues a method for execution. The method executes when this worker is ready.
+        /// </summary>
+        /// <param name="action">A method to be executed.</param>
         public void Invoke(Action action,
                            InvokeOptions options = InvokeOptions.Normal,
                            SyncOptions syncOptions = null)
         {
-            if ((options & InvokeOptions.Atomic) != 0)
+            if (options.HasFlag(InvokeOptions.Atomic))
                 throw new ArgumentException("Atomic should be used with Task");
             if (syncOptions != null)
                 ValidateSyncOptions(syncOptions);
@@ -109,17 +113,22 @@ namespace AsyncWorker
             var work = new WorkA
             {
                 Action = action,
-                Options = (WorkOptions)options,
+                Options = (WorkOptions)((int)options),
                 Sync = syncOptions != null ? new WorkSyncContext(syncOptions) : null
             };
             QueueWork(work);
         }
 
+        /// <summary>
+        /// Queues a method for execution. The method executes when this worker is ready.
+        /// </summary>
+        /// <param name="action">A method to be executed.</param>
+        /// <param name="state">An object containing data to be used by the method.</param>
         public void Invoke(Action<object> action, object state,
                            InvokeOptions options = InvokeOptions.Normal,
                            SyncOptions syncOptions = null)
         {
-            if ((options & InvokeOptions.Atomic) != 0)
+            if (options.HasFlag(InvokeOptions.Atomic))
                 throw new ArgumentException("Atomic should be used with Task");
             if (syncOptions != null)
                 ValidateSyncOptions(syncOptions);
@@ -128,12 +137,16 @@ namespace AsyncWorker
             {
                 Action = action,
                 State = state,
-                Options = (WorkOptions)options,
+                Options = (WorkOptions)((int)options),
                 Sync = syncOptions != null ? new WorkSyncContext(syncOptions) : null
             };
             QueueWork(work);
         }
 
+        /// <summary>
+        /// Queues a method for execution. The method executes when this worker is ready.
+        /// </summary>
+        /// <param name="function">The work to execute asynchronously.</param>
         public void Invoke(Func<Task> function,
                            InvokeOptions options = InvokeOptions.Normal,
                            SyncOptions syncOptions = null)
@@ -144,12 +157,17 @@ namespace AsyncWorker
             var work = new WorkF
             {
                 Function = function,
-                Options = (WorkOptions)options,
+                Options = (WorkOptions)((int)options),
                 Sync = syncOptions != null ? new WorkSyncContext(syncOptions) : null
             };
             QueueWork(work);
         }
 
+        /// <summary>
+        /// Queues a method for execution. The method executes when this worker is ready.
+        /// </summary>
+        /// <param name="function">The work to execute asynchronously.</param>
+        /// <param name="state">An object containing data to be used by the work.</param>
         public void Invoke(Func<object, Task> function, object state,
                            InvokeOptions options = InvokeOptions.Normal,
                            SyncOptions syncOptions = null)
@@ -161,12 +179,16 @@ namespace AsyncWorker
             {
                 Function = function,
                 State = state,
-                Options = (WorkOptions)options,
+                Options = (WorkOptions)((int)options),
                 Sync = syncOptions != null ? new WorkSyncContext(syncOptions) : null
             };
             QueueWork(work);
         }
 
+        /// <summary>
+        /// Queues a method for execution. The method executes when this worker is ready.
+        /// </summary>
+        /// <param name="function">The work to execute asynchronously. CancellationToken will be set when worker is closed.</param>
         public void Invoke(Func<CancellationToken, Task> function,
                            InvokeOptions options = InvokeOptions.Normal,
                            SyncOptions syncOptions = null)
@@ -178,12 +200,17 @@ namespace AsyncWorker
             {
                 Function = function,
                 Token = CreateCancellationToken(),
-                Options = (WorkOptions)options,
+                Options = (WorkOptions)((int)options),
                 Sync = syncOptions != null ? new WorkSyncContext(syncOptions) : null
             };
             QueueWork(work);
         }
 
+        /// <summary>
+        /// Queues a method for execution. The method executes when this worker is ready.
+        /// </summary>
+        /// <param name="function">The work to execute asynchronously. CancellationToken will be set when worker is closed.</param>
+        /// <param name="state">An object containing data to be used by the work.</param>
         public void Invoke(Func<object, CancellationToken, Task> function, object state,
                            InvokeOptions options = InvokeOptions.Normal,
                            SyncOptions syncOptions = null)
@@ -196,15 +223,19 @@ namespace AsyncWorker
                 Function = function,
                 State = state,
                 Token = CreateCancellationToken(),
-                Options = (WorkOptions)options,
+                Options = (WorkOptions)((int)options),
                 Sync = syncOptions != null ? new WorkSyncContext(syncOptions) : null
             };
             QueueWork(work);
         }
 
-        public Task<Task> InvokeReturn(Func<Task> function,
-                                       InvokeOptions options = InvokeOptions.Normal,
-                                       SyncOptions syncOptions = null)
+        /// <summary>
+        /// Queues the specified work to run when this worker is ready and returns a proxy for the task returned by function.
+        /// </summary>
+        /// <param name="function">The work to execute asynchronously.</param>
+        public Task<Task> InvokeAsync(Func<Task> function,
+                                      InvokeOptions options = InvokeOptions.Normal,
+                                      SyncOptions syncOptions = null)
         {
             if (syncOptions != null)
                 ValidateSyncOptions(syncOptions);
@@ -212,7 +243,7 @@ namespace AsyncWorker
             var work = new WorkF
             {
                 Function = function,
-                Options = (WorkOptions)options,
+                Options = (WorkOptions)((int)options),
                 CompletionSource = new TaskCompletionSource<Task>(),
                 Sync = syncOptions != null ? new WorkSyncContext(syncOptions) : null
             };
@@ -220,9 +251,14 @@ namespace AsyncWorker
             return work.CompletionSource.Task;
         }
 
-        public Task<Task> InvokeReturn(Func<object, Task> function, object state,
-                                       InvokeOptions options = InvokeOptions.Normal,
-                                       SyncOptions syncOptions = null)
+        /// <summary>
+        /// Queues the specified work to run when this worker is ready and returns a proxy for the task returned by function.
+        /// </summary>
+        /// <param name="function">The work to execute asynchronously.</param>
+        /// <param name="state">An object containing data to be used by the work.</param>
+        public Task<Task> InvokeAsync(Func<object, Task> function, object state,
+                                      InvokeOptions options = InvokeOptions.Normal,
+                                      SyncOptions syncOptions = null)
         {
             if (syncOptions != null)
                 ValidateSyncOptions(syncOptions);
@@ -231,7 +267,7 @@ namespace AsyncWorker
             {
                 Function = function,
                 State = state,
-                Options = (WorkOptions)options,
+                Options = (WorkOptions)((int)options),
                 CompletionSource = new TaskCompletionSource<Task>(),
                 Sync = syncOptions != null ? new WorkSyncContext(syncOptions) : null
             };
@@ -239,9 +275,13 @@ namespace AsyncWorker
             return work.CompletionSource.Task;
         }
 
-        public Task<Task> InvokeReturn(Func<CancellationToken, Task> function,
-                                       InvokeOptions options = InvokeOptions.Normal,
-                                       SyncOptions syncOptions = null)
+        /// <summary>
+        /// Queues the specified work to run when this worker is ready and returns a proxy for the task returned by function.
+        /// </summary>
+        /// <param name="function">The work to execute asynchronously. CancellationToken will be set when worker is closed.</param>
+        public Task<Task> InvokeAsync(Func<CancellationToken, Task> function,
+                                      InvokeOptions options = InvokeOptions.Normal,
+                                      SyncOptions syncOptions = null)
         {
             if (syncOptions != null)
                 ValidateSyncOptions(syncOptions);
@@ -250,7 +290,7 @@ namespace AsyncWorker
             {
                 Function = function,
                 Token = CreateCancellationToken(),
-                Options = (WorkOptions)options,
+                Options = (WorkOptions)((int)options),
                 CompletionSource = new TaskCompletionSource<Task>(),
                 Sync = syncOptions != null ? new WorkSyncContext(syncOptions) : null
             };
@@ -258,9 +298,14 @@ namespace AsyncWorker
             return work.CompletionSource.Task;
         }
 
-        public Task<Task> InvokeReturn(Func<object, CancellationToken, Task> function, object state,
-                                       InvokeOptions options = InvokeOptions.Normal,
-                                       SyncOptions syncOptions = null)
+        /// <summary>
+        /// Queues the specified work to run when this worker is ready and returns a proxy for the task returned by function.
+        /// </summary>
+        /// <param name="function">The work to execute asynchronously. CancellationToken will be set when worker is closed.</param>
+        /// <param name="state">An object containing data to be used by the work.</param>
+        public Task<Task> InvokeAsync(Func<object, CancellationToken, Task> function, object state,
+                                      InvokeOptions options = InvokeOptions.Normal,
+                                      SyncOptions syncOptions = null)
         {
             if (syncOptions != null)
                 ValidateSyncOptions(syncOptions);
@@ -270,7 +315,7 @@ namespace AsyncWorker
                 Function = function,
                 State = state,
                 Token = CreateCancellationToken(),
-                Options = (WorkOptions)options,
+                Options = (WorkOptions)((int)options),
                 CompletionSource = new TaskCompletionSource<Task>(),
                 Sync = syncOptions != null ? new WorkSyncContext(syncOptions) : null
             };
@@ -278,6 +323,10 @@ namespace AsyncWorker
             return work.CompletionSource.Task;
         }
 
+        /// <summary>
+        /// Sets barrier.
+        /// All queued works before this barrier finish working before another queued works after this call.
+        /// </summary>
         public void SetBarrier()
         {
             var work = new Work
@@ -287,7 +336,11 @@ namespace AsyncWorker
             QueueBarrier(work);
         }
 
-        public Task SetBarrierReturn()
+        /// <summary>
+        /// Sets barrier and returns a proxy task which will be completed when barrier is consumed. 
+        /// All queued works before this barrier finish working before another queued works after this call.
+        /// </summary>
+        public Task SetBarrierAsync()
         {
             var work = new Work
             {
@@ -343,7 +396,7 @@ namespace AsyncWorker
 
             if (ownerWork != null)
             {
-                if (ownerWork.Sync != null && ownerWork.Options.HasFlag(InvokeOptions.Atomic) == false)
+                if (ownerWork.Sync != null && ownerWork.Options.HasFlag(WorkOptions.Atomic) == false)
                 {
                     work.Sync = new WorkSyncContext(ownerWork.Sync.Options);
                     work.Sync.RequestSyncToWaiters();
@@ -475,7 +528,7 @@ namespace AsyncWorker
                             continue;
                         }
 
-                        if (work.Options.HasFlag(InvokeOptions.Atomic))
+                        if (work.Options.HasFlag(WorkOptions.Atomic))
                         {
                             if (_isInAtomic)
                                 throw new InvalidOperationException("Already in atomic");
@@ -520,7 +573,7 @@ namespace AsyncWorker
                 syncCtx = new WorkerSynchronizationContext(this, _atomicWork);
                 SynchronizationContext.SetSynchronizationContext(syncCtx);
             }
-            else if (work.Sync != null || work.Options.HasFlag(InvokeOptions.Atomic))
+            else if (work.Sync != null || work.Options.HasFlag(WorkOptions.Atomic))
             {
                 syncCtx = new WorkerSynchronizationContext(this, work);
                 SynchronizationContext.SetSynchronizationContext(syncCtx);
@@ -544,7 +597,7 @@ namespace AsyncWorker
                 SynchronizationContext.SetSynchronizationContext(_synchronizationContext);
                 if (work.Sync != null)
                 {
-                    if (task == null || work.Options.HasFlag(InvokeOptions.Atomic) == false)
+                    if (task == null || work.Options.HasFlag(WorkOptions.Atomic) == false)
                         work.Sync.NotifySyncEndToWaiters();
                 }
             }
@@ -593,7 +646,7 @@ namespace AsyncWorker
                     break;
             }
 
-            if (work.Options.HasFlag(InvokeOptions.Atomic))
+            if (work.Options.HasFlag(WorkOptions.Atomic))
             {
                 if (work.Sync != null)
                     work.Sync.NotifySyncEndToWaiters();
@@ -670,7 +723,7 @@ namespace AsyncWorker
 
         internal void OnSyncReady(WorkSyncContext sync)
         {
-            if (_waitingSyncedWork.Options.HasFlag(InvokeOptions.Atomic))
+            if (_waitingSyncedWork.Options.HasFlag(WorkOptions.Atomic))
             {
                 if (_isInAtomic)
                     throw new InvalidOperationException("Already in atomic");
