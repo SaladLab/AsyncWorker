@@ -589,7 +589,7 @@ namespace AsyncWorker
                 if (UnhandledException != null)
                     UnhandledException(this, e);
                 else
-                    throw; // throw 해야 하나..
+                    throw;
             }
 
             if (syncCtx != null)
