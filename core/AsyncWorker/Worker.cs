@@ -260,6 +260,9 @@ namespace AsyncWorker
 
         private void QueueWork(Work work)
         {
+            if (work.Sync != null)
+                work.Sync.QueueSyncToWaiters();
+
             lock (_lock)
             {
                 if (_isDisposed)
@@ -301,7 +304,10 @@ namespace AsyncWorker
             if (ownerWork != null)
             {
                 if (ownerWork.Sync != null)
+                {
                     work.Sync = new WorkSyncContext(ownerWork.Sync.Options);
+                    work.Sync.QueueSyncToWaiters();
+                }
             }
 
             bool willSpawn = false;

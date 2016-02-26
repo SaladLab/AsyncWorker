@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Threading;
 
 namespace AsyncWorker
 {
@@ -10,6 +8,10 @@ namespace AsyncWorker
         {
             Options = options;
             WaitingCount = options.Workers.Length + 1;
+        }
+
+        public void QueueSyncToWaiters()
+        {
             foreach (var worker in Options.Workers)
             {
                 worker.QueueSync(this);
