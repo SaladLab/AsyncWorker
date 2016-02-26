@@ -85,12 +85,26 @@ namespace AsyncWorker
             return _cancelTokenSource.Token;
         }
 
+        private void ValidateSyncOptions(SyncOptions syncOptions)
+        {
+            if (syncOptions.Workers.Length == 0)
+                throw new ArgumentException(nameof(syncOptions), "The number of worker should be greater than 0");
+
+            if (syncOptions.Workers.Any(w => w == this))
+                throw new ArgumentException(nameof(syncOptions), "There is this worker in Workers");
+
+            if (syncOptions.Workers.Length != syncOptions.Workers.Distinct().Count())
+                throw new ArgumentException(nameof(syncOptions), "There is a duplicate worker in Workers");
+        }
+        
         public void Invoke(Action action,
                            InvokeOptions options = InvokeOptions.Normal,
                            SyncOptions syncOptions = null)
         {
             if ((options & InvokeOptions.Atomic) != 0)
                 throw new ArgumentException("Atomic should be used with Task");
+            if (syncOptions != null)
+                ValidateSyncOptions(syncOptions);
 
             var work = new WorkA
             {
@@ -107,6 +121,8 @@ namespace AsyncWorker
         {
             if ((options & InvokeOptions.Atomic) != 0)
                 throw new ArgumentException("Atomic should be used with Task");
+            if (syncOptions != null)
+                ValidateSyncOptions(syncOptions);
 
             var work = new WorkAs
             {
@@ -122,6 +138,9 @@ namespace AsyncWorker
                            InvokeOptions options = InvokeOptions.Normal,
                            SyncOptions syncOptions = null)
         {
+            if (syncOptions != null)
+                ValidateSyncOptions(syncOptions);
+
             var work = new WorkF
             {
                 Function = function,
@@ -135,6 +154,9 @@ namespace AsyncWorker
                            InvokeOptions options = InvokeOptions.Normal,
                            SyncOptions syncOptions = null)
         {
+            if (syncOptions != null)
+                ValidateSyncOptions(syncOptions);
+
             var work = new WorkFs
             {
                 Function = function,
@@ -149,6 +171,9 @@ namespace AsyncWorker
                            InvokeOptions options = InvokeOptions.Normal,
                            SyncOptions syncOptions = null)
         {
+            if (syncOptions != null)
+                ValidateSyncOptions(syncOptions);
+
             var work = new WorkFt
             {
                 Function = function,
@@ -163,6 +188,9 @@ namespace AsyncWorker
                            InvokeOptions options = InvokeOptions.Normal,
                            SyncOptions syncOptions = null)
         {
+            if (syncOptions != null)
+                ValidateSyncOptions(syncOptions);
+
             var work = new WorkFst
             {
                 Function = function,
@@ -178,6 +206,9 @@ namespace AsyncWorker
                                        InvokeOptions options = InvokeOptions.Normal,
                                        SyncOptions syncOptions = null)
         {
+            if (syncOptions != null)
+                ValidateSyncOptions(syncOptions);
+
             var work = new WorkF
             {
                 Function = function,
@@ -193,6 +224,9 @@ namespace AsyncWorker
                                        InvokeOptions options = InvokeOptions.Normal,
                                        SyncOptions syncOptions = null)
         {
+            if (syncOptions != null)
+                ValidateSyncOptions(syncOptions);
+
             var work = new WorkFs
             {
                 Function = function,
@@ -209,6 +243,9 @@ namespace AsyncWorker
                                        InvokeOptions options = InvokeOptions.Normal,
                                        SyncOptions syncOptions = null)
         {
+            if (syncOptions != null)
+                ValidateSyncOptions(syncOptions);
+
             var work = new WorkFt
             {
                 Function = function,
@@ -225,6 +262,9 @@ namespace AsyncWorker
                                        InvokeOptions options = InvokeOptions.Normal,
                                        SyncOptions syncOptions = null)
         {
+            if (syncOptions != null)
+                ValidateSyncOptions(syncOptions);
+
             var work = new WorkFst
             {
                 Function = function,
@@ -260,9 +300,6 @@ namespace AsyncWorker
 
         private void QueueWork(Work work)
         {
-            if (work.Sync != null)
-                work.Sync.RequestSyncToWaiters();
-
             lock (_lock)
             {
                 if (_isDisposed)
@@ -290,6 +327,9 @@ namespace AsyncWorker
                     }
                 }
             }
+
+            if (work.Sync != null)
+                work.Sync.RequestSyncToWaiters();
         }
 
         internal void QueuePost(SendOrPostCallback action, object state, Work ownerWork)
