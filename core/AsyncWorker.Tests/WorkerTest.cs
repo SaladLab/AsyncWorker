@@ -505,12 +505,14 @@ namespace AsyncWorker.Tests
 
             // Act
 
+#pragma warning disable 0162
             worker.Invoke(() =>
             {
                 log.Enqueue(1);
                 throw new Exception("Test");
                 log.Enqueue(-1);
             });
+#pragma warning restore 0162
 
             worker.Invoke(() =>
             {
@@ -538,6 +540,7 @@ namespace AsyncWorker.Tests
 
             // Act
 
+#pragma warning disable 0162
             worker.Invoke(async () =>
             {
                 log.Enqueue(1);
@@ -553,6 +556,7 @@ namespace AsyncWorker.Tests
                 throw new Exception("Test2");
                 log.Enqueue(-2);
             });
+#pragma warning restore 0162
 
             await worker.SetBarrierReturn();
 
