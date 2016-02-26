@@ -6,7 +6,7 @@ namespace AsyncWorker
 {
     internal class Work
     {
-        public int Options;
+        public WorkOptions Options;
         public TaskCompletionSource<Task> CompletionSource;
         public WorkSyncContext Sync;
 

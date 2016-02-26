@@ -109,7 +109,7 @@ namespace AsyncWorker
             var work = new WorkA
             {
                 Action = action,
-                Options = (int)options,
+                Options = (WorkOptions)options,
                 Sync = syncOptions != null ? new WorkSyncContext(syncOptions) : null
             };
             QueueWork(work);
@@ -128,7 +128,7 @@ namespace AsyncWorker
             {
                 Action = action,
                 State = state,
-                Options = (int)options,
+                Options = (WorkOptions)options,
                 Sync = syncOptions != null ? new WorkSyncContext(syncOptions) : null
             };
             QueueWork(work);
@@ -144,7 +144,7 @@ namespace AsyncWorker
             var work = new WorkF
             {
                 Function = function,
-                Options = (int)options,
+                Options = (WorkOptions)options,
                 Sync = syncOptions != null ? new WorkSyncContext(syncOptions) : null
             };
             QueueWork(work);
@@ -161,7 +161,7 @@ namespace AsyncWorker
             {
                 Function = function,
                 State = state,
-                Options = (int)options,
+                Options = (WorkOptions)options,
                 Sync = syncOptions != null ? new WorkSyncContext(syncOptions) : null
             };
             QueueWork(work);
@@ -178,7 +178,7 @@ namespace AsyncWorker
             {
                 Function = function,
                 Token = CreateCancellationToken(),
-                Options = (int)options,
+                Options = (WorkOptions)options,
                 Sync = syncOptions != null ? new WorkSyncContext(syncOptions) : null
             };
             QueueWork(work);
@@ -196,7 +196,7 @@ namespace AsyncWorker
                 Function = function,
                 State = state,
                 Token = CreateCancellationToken(),
-                Options = (int)options,
+                Options = (WorkOptions)options,
                 Sync = syncOptions != null ? new WorkSyncContext(syncOptions) : null
             };
             QueueWork(work);
@@ -212,7 +212,7 @@ namespace AsyncWorker
             var work = new WorkF
             {
                 Function = function,
-                Options = (int)options,
+                Options = (WorkOptions)options,
                 CompletionSource = new TaskCompletionSource<Task>(),
                 Sync = syncOptions != null ? new WorkSyncContext(syncOptions) : null
             };
@@ -231,7 +231,7 @@ namespace AsyncWorker
             {
                 Function = function,
                 State = state,
-                Options = (int)options,
+                Options = (WorkOptions)options,
                 CompletionSource = new TaskCompletionSource<Task>(),
                 Sync = syncOptions != null ? new WorkSyncContext(syncOptions) : null
             };
@@ -250,7 +250,7 @@ namespace AsyncWorker
             {
                 Function = function,
                 Token = CreateCancellationToken(),
-                Options = (int)options,
+                Options = (WorkOptions)options,
                 CompletionSource = new TaskCompletionSource<Task>(),
                 Sync = syncOptions != null ? new WorkSyncContext(syncOptions) : null
             };
@@ -270,7 +270,7 @@ namespace AsyncWorker
                 Function = function,
                 State = state,
                 Token = CreateCancellationToken(),
-                Options = (int)options,
+                Options = (WorkOptions)options,
                 CompletionSource = new TaskCompletionSource<Task>(),
                 Sync = syncOptions != null ? new WorkSyncContext(syncOptions) : null
             };
@@ -282,7 +282,7 @@ namespace AsyncWorker
         {
             var work = new Work
             {
-                Options = (int)WorkOptions.Barrier
+                Options = WorkOptions.Barrier
             };
             QueueBarrier(work);
         }
@@ -291,7 +291,7 @@ namespace AsyncWorker
         {
             var work = new Work
             {
-                Options = (int)WorkOptions.Barrier,
+                Options = WorkOptions.Barrier,
                 CompletionSource = new TaskCompletionSource<Task>()
             };
             QueueBarrier(work);
@@ -338,12 +338,12 @@ namespace AsyncWorker
             {
                 Action = action,
                 State = state,
-                Options = (int)WorkOptions.Post
+                Options = WorkOptions.Post
             };
 
             if (ownerWork != null)
             {
-                if (ownerWork.Sync != null && (ownerWork.Options & (int)InvokeOptions.Atomic) == 0)
+                if (ownerWork.Sync != null && ownerWork.Options.HasFlag(InvokeOptions.Atomic) == false)
                 {
                     work.Sync = new WorkSyncContext(ownerWork.Sync.Options);
                     work.Sync.RequestSyncToWaiters();
@@ -396,7 +396,7 @@ namespace AsyncWorker
             var work = new WorkSync
             {
                 Source = source,
-                Options = (int)WorkOptions.Sync
+                Options = WorkOptions.Sync
             };
 
             bool willSpawn = false;
@@ -426,7 +426,7 @@ namespace AsyncWorker
                     w.CompletionSource.SetCanceled();
             }
             _workQueue = new Queue<Work>(
-                _workQueue.Where(w => (w.Options & (int)WorkOptions.Post) != 0));
+                _workQueue.Where(w => w.Options.HasFlag(WorkOptions.Post)));
 
             if (_pendingWorkQueue != null)
             {
@@ -436,7 +436,7 @@ namespace AsyncWorker
                         w.CompletionSource.SetCanceled();
                 }
                 _pendingWorkQueue = new Queue<Work>(
-                    _pendingWorkQueue.Where(w => (w.Options & (int)WorkOptions.Post) != 0));
+                    _pendingWorkQueue.Where(w => w.Options.HasFlag(WorkOptions.Post)));
             }
         }
 
@@ -475,7 +475,7 @@ namespace AsyncWorker
                             continue;
                         }
 
-                        if ((work.Options & (int)InvokeOptions.Atomic) != 0)
+                        if (work.Options.HasFlag(InvokeOptions.Atomic))
                         {
                             if (_isInAtomic)
                                 throw new InvalidOperationException("Already in atomic");
@@ -486,7 +486,7 @@ namespace AsyncWorker
                             if (_workQueue == null)
                                 _workQueue = new Queue<Work>();
                         }
-                        else if ((work.Options & (int)WorkOptions.Barrier) != 0)
+                        else if (work.Options.HasFlag(WorkOptions.Barrier))
                         {
                             if (_runningTaskCount > 0)
                             {
@@ -498,7 +498,7 @@ namespace AsyncWorker
                             }
                             continue;
                         }
-                        else if ((work.Options & (int)WorkOptions.Sync) != 0)
+                        else if (work.Options.HasFlag(WorkOptions.Sync))
                         {
                             _waitingSync = (WorkSync)work;
                             var source = _waitingSync.Source;
@@ -515,12 +515,12 @@ namespace AsyncWorker
         private void ProcessWork(Work work)
         {
             WorkerSynchronizationContext syncCtx = null;
-            if ((work.Options & (int)WorkOptions.Post) != 0 && _isInAtomic)
+            if (work.Options.HasFlag(WorkOptions.Post) && _isInAtomic)
             {
                 syncCtx = new WorkerSynchronizationContext(this, _atomicWork);
                 SynchronizationContext.SetSynchronizationContext(syncCtx);
             }
-            else if (work.Sync != null || (work.Options & (int)InvokeOptions.Atomic) != 0)
+            else if (work.Sync != null || work.Options.HasFlag(InvokeOptions.Atomic))
             {
                 syncCtx = new WorkerSynchronizationContext(this, work);
                 SynchronizationContext.SetSynchronizationContext(syncCtx);
@@ -544,7 +544,7 @@ namespace AsyncWorker
                 SynchronizationContext.SetSynchronizationContext(_synchronizationContext);
                 if (work.Sync != null)
                 {
-                    if (task == null || (work.Options & (int)InvokeOptions.Atomic) == 0)
+                    if (task == null || work.Options.HasFlag(InvokeOptions.Atomic) == false)
                         work.Sync.NotifySyncEndToWaiters();
                 }
             }
@@ -593,7 +593,7 @@ namespace AsyncWorker
                     break;
             }
 
-            if ((work.Options & (int)InvokeOptions.Atomic) != 0)
+            if (work.Options.HasFlag(InvokeOptions.Atomic))
             {
                 if (work.Sync != null)
                     work.Sync.NotifySyncEndToWaiters();
@@ -657,7 +657,7 @@ namespace AsyncWorker
                 _workQueue.Enqueue(w);
 
                 // if we got barrier in pending works, trigger barrier mode again
-                if ((w.Options & (int)WorkOptions.Barrier) != 0)
+                if (w.Options.HasFlag(WorkOptions.Barrier))
                 {
                     _isInBarrier = true;
                     break;
@@ -670,7 +670,7 @@ namespace AsyncWorker
 
         internal void OnSyncReady(WorkSyncContext sync)
         {
-            if ((_waitingSyncedWork.Options & (int)InvokeOptions.Atomic) != 0)
+            if (_waitingSyncedWork.Options.HasFlag(InvokeOptions.Atomic))
             {
                 if (_isInAtomic)
                     throw new InvalidOperationException("Already in atomic");
