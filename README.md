@@ -1,6 +1,9 @@
 # AsyncWorker
 
+[![NuGet Status](http://img.shields.io/nuget/v/AsyncWorker.svg?style=flat)](https://www.nuget.org/packages/AsyncWorker/)
 [![Build status](https://ci.appveyor.com/api/projects/status/klxyrlxal7yy0f26?svg=true)](https://ci.appveyor.com/project/veblush/asyncworker)
+[![Coverage Status](https://coveralls.io/repos/github/SaladLab/AsyncWorker/badge.svg?branch=master)](https://coveralls.io/github/SaladLab/AsyncWorker?branch=master)
+[![Coverity Status](https://scan.coverity.com/projects/8441/badge.svg?flat=1)](https://scan.coverity.com/projects/saladlab-asyncworker)
 
 With .NET asynchronous worker, various "async" works can be scheduled and executed
 in an easy way. AsyncWorker can be thought as a dedicated work queue which executes

@@ -337,7 +337,7 @@ namespace AsyncWorker
         }
 
         /// <summary>
-        /// Sets barrier and returns a proxy task which will be completed when barrier is consumed. 
+        /// Sets barrier and returns a proxy task which will be completed when barrier is consumed.
         /// All queued works before this barrier finish working before another queued works after this call.
         /// </summary>
         public Task SetBarrierAsync()
@@ -678,7 +678,7 @@ namespace AsyncWorker
                 {
                     if (_waitingBarrier != null)
                     {
-                        Debug.Assert(_isInBarrier);
+                        Debug.Assert(_isInBarrier, "Should be in barrier.");
                         OnBarrierComplete(_waitingBarrier);
 
                         if (_isWorkLoopSpawned == false)
@@ -698,7 +698,7 @@ namespace AsyncWorker
 
         private void OnBarrierComplete(Work barrierWork)
         {
-            Debug.Assert(Monitor.IsEntered(_lock));
+            Debug.Assert(Monitor.IsEntered(_lock), "This handler should be under lock.");
 
             _isInBarrier = false;
             _waitingBarrier = null;
