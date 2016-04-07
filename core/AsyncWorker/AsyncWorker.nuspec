@@ -7,8 +7,8 @@
     <authors>Esun Kim</authors>
     <owners>Esun Kim</owners>
     <description>.NET asynchronous worker to schedule many "async" work in an easy way</description>
-    <licenseUrl>https://raw.githubusercontent.com/SaladbowlCreative/AsyncWorker/master/LICENSE</licenseUrl>
-    <projectUrl>https://github.com/SaladbowlCreative/AsyncWorker</projectUrl>
+    <licenseUrl>https://raw.githubusercontent.com/SaladLab/AsyncWorker/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/SaladLab/AsyncWorker</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <releaseNotes>@releaseNotes@</releaseNotes>
     <copyright>Copyright © 2016 SaladLab</copyright>
