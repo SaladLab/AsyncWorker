@@ -26,15 +26,13 @@ Target "Cover" <| fun _ -> coverSolution solution
     
 Target "Coverity" <| fun _ -> coveritySolution solution "SaladLab/AsyncWorker"
 
-Target "Nuget" <| fun _ ->
-    createNugetPackages solution
-    publishNugetPackages solution
+Target "PackNuget" <| fun _ -> createNugetPackages solution
 
-Target "CreateNuget" <| fun _ ->
-    createNugetPackages solution
+Target "Pack" <| fun _ -> ()
 
-Target "PublishNuget" <| fun _ ->
-    publishNugetPackages solution
+Target "PublishNuget" <| fun _ -> publishNugetPackages solution
+
+Target "Publish" <| fun _ -> ()
 
 Target "CI" <| fun _ -> ()
 
@@ -47,13 +45,17 @@ Target "Help" <| fun _ ->
   ==> "Build"
   ==> "Test"
 
-"Build" ==> "Nuget"
-"Build" ==> "CreateNuget"
 "Build" ==> "Cover"
 "Restore" ==> "Coverity"
 
+let isPublishOnly = getBuildParam "publishonly"
+
+"Build" ==> "PackNuget" =?> ("PublishNuget", isPublishOnly = "")
+"PackNuget" ==> "Pack"
+"PublishNuget" ==> "Publish"
+
 "Test" ==> "CI"
 "Cover" ==> "CI"
-"Nuget" ==> "CI"
+"Publish" ==> "CI"
 
 RunTargetOrDefault "Help"
