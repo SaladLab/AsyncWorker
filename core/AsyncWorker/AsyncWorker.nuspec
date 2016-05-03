@@ -12,7 +12,7 @@
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <releaseNotes>@releaseNotes@</releaseNotes>
     <copyright>Copyright © 2016 SaladLab</copyright>
-    <tags>akka interfaced</tags>
+    <tags>async await worker queue pool</tags>
     @dependencies@
     @references@
   </metadata>
